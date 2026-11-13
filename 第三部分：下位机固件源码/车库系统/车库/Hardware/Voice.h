@@ -1,0 +1,9 @@
+#ifndef __VOICE_H
+#define __VOICE_H
+
+#include <stdint.h>
+
+void Voice_Init(void);
+void Voice_Play(char *text);
+
+#endif

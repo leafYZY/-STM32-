@@ -1,0 +1,118 @@
+#include "stm32f10x.h"
+#include "BLE_Serial.h"
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
+
+char BLE_RxPacket[100];
+uint8_t BLE_RxFlag;
+static uint8_t RxState;
+static uint8_t pRxPacket;
+
+
+/**
+  * 函    数：BLE串口初始化（USART2，PA2/PA3）
+  * 参    数：无
+  * 返 回 值：无
+  */
+void BLE_Serial_Init(void)
+{
+	RxState = 0;
+	pRxPacket = 0;
+	BLE_RxFlag = 0;
+	
+	/*开启时钟*/
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);	//USART2在APB1
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+	
+	/*GPIO初始化*/
+	GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;				//PA2 = USART2_TX
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;				//PA3 = USART2_RX
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	/*USART初始化*/
+	USART_InitTypeDef USART_InitStructure;
+	USART_InitStructure.USART_BaudRate = 9600;
+	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+	USART_InitStructure.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
+	USART_InitStructure.USART_Parity = USART_Parity_No;
+	USART_InitStructure.USART_StopBits = USART_StopBits_1;
+	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+	USART_Init(USART2, &USART_InitStructure);
+	
+	/*中断配置*/
+	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+	
+	NVIC_InitTypeDef NVIC_InitStructure;
+	NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+	NVIC_Init(&NVIC_InitStructure);
+	
+	USART_Cmd(USART2, ENABLE);
+}
+
+/**
+  * 函    数：BLE发送字符串
+  */
+void BLE_Serial_SendString(char *Buf)
+{
+	uint8_t i = 0;
+	for (i = 0; Buf[i] != '\0'; i++)
+	{
+		USART_SendData(USART2, Buf[i]);
+		while (USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET);
+	}
+}
+
+/**
+  * 函    数：USART2中断（BLE模块数据接收）
+  */
+void USART2_IRQHandler(void)
+{
+	if (USART_GetITStatus(USART2, USART_IT_RXNE) == SET)
+	{
+		uint8_t RxData = USART_ReceiveData(USART2);
+		
+		/*状态机：格式 @命令#* */
+		if (RxState == 0)
+		{
+			if (RxData == '@' && BLE_RxFlag == 0)
+			{
+				RxState = 1;
+				pRxPacket = 0;
+			}
+		}
+		else if (RxState == 1)
+		{
+			if (RxData == '#')
+			{
+				RxState = 2;
+			}
+			else if (pRxPacket < sizeof(BLE_RxPacket) - 1)
+			{
+				/* 边界保护：超长帧直接截断丢弃，避免 pRxPacket 越界写坏内存 */
+				BLE_RxPacket[pRxPacket] = RxData;
+				pRxPacket++;
+			}
+		}
+		else if (RxState == 2)
+		{
+			if (RxData == '*')
+			{
+				RxState = 0;
+				BLE_RxPacket[pRxPacket] = '\0';
+				BLE_RxFlag = 1;
+			}
+		}
+		
+		USART_ClearITPendingBit(USART2, USART_IT_RXNE);
+	}
+}

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>车库二维码测试卡</title>
+<style>
+  body{margin:0;padding:28px 24px 40px;background:#fff;color:#1a1a1a;
+       font-family:-apple-system,"Microsoft YaHei","PingFang SC",sans-serif;}
+  h1{font-size:20px;font-weight:500;margin:0 0 6px;}
+  .sub{font-size:13px;color:#666;margin:0 0 4px;line-height:1.7;}
+  .warn{display:inline-block;margin:10px 0 22px;padding:8px 12px;border-radius:8px;
+        background:#FAEEDA;color:#854F0B;font-size:13px;line-height:1.6;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;}
+  .card{border:1px solid #e3e3e3;border-radius:12px;padding:14px;text-align:center;}
+  .card img{width:100%;max-width:190px;image-rendering:pixelated;}
+  .ttl{font-size:14px;font-weight:500;margin-bottom:8px;}
+  .code{font-family:ui-monospace,Consolas,monospace;font-size:13px;margin-top:8px;
+        background:#f4f4f4;border-radius:6px;padding:4px 6px;word-break:break-all;}
+  .desc{font-size:12px;color:#666;margin-top:6px;line-height:1.5;}
+  @media print{body{padding:10mm}.card{break-inside:avoid}}
+</style>
+</head>
+<body>
+  <h1>车库二维码测试卡</h1>
+  <p class="sub">七个码对应七条分支。建议顺序：① 注册 → ② 充值 → ④ 进场 → ③ 注册并充值 → ⑤ 出厂车牌 → ⑥ 外来车 → ⑦ 无效码。</p>
+  <div class="warn">每张码的文本都以 <b>.</b> 结尾，这是固件识别一包数据的结束符，打印或截图时不要裁掉。</div>
+  <div class="grid">
+    <div class="card">
+      <div class="ttl">① 注册车牌</div>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6CAIAAAAHjs1qAAAD9klEQVR4nO3dwYrbMBRA0XHp//+yu+1mwoD6Ktn3nH3smFxE4CH5uu/7Cxp+7f4C8P/InRC5EyJ3QuROiNwJkTshcidE7oTInRC5EyJ3QuROiNwJkTshcidE7oTInRC5E/J75cPXdX29y+edu2c+7xO/84qV3dVWd0LkTojcCZE7IXInRO6EyJ0QuRMid0KWpqqfnXm28MqUceWJdt1315VXzE2Cre6EyJ0QuRMid0LkTojcCZE7IXInRO6EDE5Vd03Odk0K557o85Xnnvd63W9kdSdE7oTInRC5EyJ3QuROiNwJkTshcidk21T1ic7cb8rPWd0JkTshcidE7oTInRC5EyJ3QuROiNwJMVU94v2mc5/lb1Z3QuROiNwJkTshcidE7oTInRC5EyJ3QrZNVd83C1zZyXrm3PR+3W9kdSdE7oTInRC5EyJ3QuROiNwJkTshcidkcKo691bOMz1xr+oV+42s7oTInRC5EyJ3QuROiNwJkTshcidE7oQsTVXft5dxzsrcdO6+NVZ3QuROiNwJkTshcidE7oTInRC5EyJ3QpamqrvOrZ3b9zln5b5nPtFncztoV65sdSdE7oTInRC5EyJ3QuROiNwJkTshcidk2wnAc5PCJ85cn/jW1Sd+Z6s7IXInRO6EyJ0QuRMid0LkTojcCZE7IdtOAJ7buzl335Ure3PqCazuhMidELkTIndC5E6I3AmROyFyJ0TuhFzvO6d31z7IM89DXnG/7jeyuhMid0LkTojcCZE7IXInRO6EyJ0QuRMy+F7Vuc+uOPO+TzyX+H7gd7a6EyJ3QuROiNwJkTshcidE7oTInRC5E7LtBOBdnnhq8Zz7dWcpf2Z1J0TuhMidELkTIndC5E6I3AmROyFyJ2TbXtUznTn7rE2R77FfwepOiNwJkTshcidE7oTInRC5EyJ3QuROyNJU9YkTyrlJ4a7zkOfmpveR79xdYXUnRO6EyJ0QuRMid0LkTojcCZE7IXInZHCqumuf665Z4Jwz56bXpvm0E4DhR/yZIUTuhMidELkTIndC5E6I3AmROyHbpqpPtGsGuTJlnNtfey9cedd82upOiNwJkTshcidE7oTInRC5EyJ3QuROiKnqP7My+9y1o/Q+8spzrO6EyJ0QuRMid0LkTojcCZE7IXInRO6EbJuqnjl12/VET9wF+8QZs9WdELkTIndC5E6I3AmROyFyJ0TuhMidkMGp6q5TXufsmhTuegftNfadnQAM4/yZIUTuhMidELkTIndC5E6I3AmROyHX+/aMwnes7oTInRC5EyJ3QuROiNwJkTshcidE7oTInRC5EyJ3QuROiNwJkTshcidE7oTInRC589XxB/Ib+xp7dtbKAAAAAElFTkSuQmCC" alt="A777777ZC.">
+      <div class="code">A777777ZC.</div>
+      <div class="desc">A777777 录入系统，余额 0，不开闸</div>
+    </div>
+    <div class="card">
+      <div class="ttl">② 直接充值</div>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6CAIAAAAHjs1qAAAD20lEQVR4nO3dUWrkMBBAwXHI/a/snCAmIBRJflX/O3h2Hk2gkXzd9/2Bhq/VDwD/R+6EyJ0QuRMid0LkTojcCZE7IXInRO6EyJ0QuRMid0LkTojcCZE7IXInRO6EyJ2Q75F/fF3X512eT+7u+X1PfOYRI6erTXdC5E6I3AmROyFyJ0TuhMidELkTIndChraqz/a8W3hky7jqG83bjN6v+42eme6EyJ0QuRMid0LkTojcCZE7IXInRO6ETNyqPqttCp/teaL0et1vZLoTIndC5E6I3AmROyFyJ0TuhMidELkTsmyreqLnLePITbwnboJPZLoTIndC5E6I3AmROyFyJ0TuhMidELkTYqt6/NtPbWT/znQnRO6EyJ0QuRMid0LkTojcCZE7IXInZNlWtbYLnHfOdZ77db+R6U6I3AmROyFyJ0TuhMidELkTIndC5E7Id+1doZR/I9OdELkTIndC5E6I3AmROyFyJ0TuhMidkOt95xHn8W7U05nuhMidELkTIndC5E6I3AmROyFyJ0TuhAxtVVdtGWu36Z54ovTesivTnRC5EyJ3QuROiNwJkTshcidE7oTInZChG4BH9perdp+rtn17nnO9t9x8z2O6EyJ3QuROiNwJkTshcidE7oTInRC5EzK0Vd1zbzryyXuesHxWOwU7wnQnRO6EyJ0QuRMid0LkTojcCZE7IXInZNOzqnvuTVed7Ky5p/0/m+6EyJ0QuRMid0LkTojcCZE7IXInRO6ELDurumqbu+fNtO+7tfjack9suhMid0LkTojcCZE7IXInRO6EyJ0QuRMy8azqKu87UbrnJvhadIfzyPc13QmROyFyJ0TuhMidELkTIndC5E6I3AmZeFb1RKvuB37fidJ7y4276U6I3AmROyFyJ0TuhMidELkTIndC5E7I0Fb1xL3aqneyzvvkPZ9qT6Y7IXInRO6EyJ0QuRMid0LkTojcCZE7IRO3qs9OPCW56pn3vHn4xH2t6U6I3AmROyFyJ0TuhMidELkTIndC5E7Isq3qid53dnPVJnjVnth0J0TuhMidELkTIndC5E6I3AmROyFyJ8RW9Z+MvP101ftcV32jeUx3QuROiNwJkTshcidE7oTInRC5EyJ3QpZtVffcuo2Yt6F832nUe+CTR8ox3QmROyFyJ0TuhMidELkTIndC5E6I3AmZuFXdc1O46hvN2yOe+FSXG4BhNn/MECJ3QuROiNwJkTshcidE7oTInZDrfWdG4TemOyFyJ0TuhMidELkTIndC5E6I3AmROyFyJ0TuhMidELkTIndC5E6I3AmROyFyJ0TufDp+ACMa6QWCO5aJAAAAAElFTkSuQmCC" alt="A777777CZ100.">
+      <div class="code">A777777CZ100.</div>
+      <div class="desc">向已注册车牌充值 100，不开闸</div>
+    </div>
+    <div class="card">
+      <div class="ttl">③ 注册并充值</div>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6CAIAAAAHjs1qAAAD60lEQVR4nO3dQW7bMBBA0ajo/a+sbrsSUNBTUv7v7RPb8ccgwIDUdd/3DzT82v0G4P+ROyFyJ0TuhMidELkTIndC5E6I3AmROyFyJ0TuhMidELkTIndC5E6I3AmROyFyJ+T3yg9f1/XzXZ5P7s593pXX3fWed1k5XW26EyJ3QuROiNwJkTshcidE7oTInRC5E7K0VX125t3Cuzajtd985ndkuhMid0LkTojcCZE7IXInRO6EyJ0QuRMyuFX9vu3mM5/o/O/IdCdE7oTInRC5EyJ3QuROiNwJkTshcidk21b1jebu2p27AZi/me6EyJ0QuRMid0LkTojcCZE7IXInRO6E2KoecRr1+55+eibTnRC5EyJ3QuROiNwJkTshcidE7oTInZBtW9U3nrBcec9vPG96H/muVpjuhMidELkTIndC5E6I3AmROyFyJ0TuhAxuVb/v/OWuzejc615f9x09M90JkTshcidE7oTInRC5EyJ3QuROiNwJub7vPOIuc89V5VNMd0LkTojcCZE7IXInRO6EyJ0QuRMid0KWzqo6Q/mpvenKX3LXt3AvvKsVK5/IdCdE7oTInRC5EyJ3QuROiNwJkTshcidk2w3Ac6czd93E+8afvWNnZE13QuROiNwJkTshcidE7oTInRC5EyJ3Qga3qmeeg1x53V2nM890vXBfa7oTIndC5E6I3AmROyFyJ0TuhMidELkTMrhVndtBrmzs5m7TfeMdvzWmOyFyJ0TuhMidELkTIndC5E6I3AmROyHX3HM3n73xWaFzv/nMc673kXvxFaY7IXInRO6EyJ0QuRMid0LkTojcCZE7IUtb1Zpd503ndq73C193pVjTnRC5EyJ3QuROiNwJkTshcidE7oTInZBtZ1XPdOaJ0jP3tfeRG9lnpjshcidE7oTInRC5EyJ3QuROiNwJkTsh256rusuZ276519114/GZf0nTnRC5EyJ3QuROiNwJkTshcidE7oTInZDBrer37eSeze0vz3zP99hZVTcAwwf4Z4YQuRMid0LkTojcCZE7IXInRO6EbNuq8n9u4t21+3y2a8dsuhMid0LkTojcCZE7IXInRO6EyJ0QuRNiq/oPzrwvd+686ZxdG1nTnRC5EyJ3QuROiNwJkTshcidE7oTInZBtW9Uzb8Q9c1M4t5F9tuuZrJ6rCh/gnxlC5E6I3AmROyFyJ0TuhMidELkTMrhV3bULnPN9T05949ncFaY7IXInRO6EyJ0QuRMid0LkTojcCZE7IdeZu0CYYLoTIndC5E6I3AmROyFyJ0TuhMidELkTIndC5E6I3AmROyFyJ0TuhMidELkTIndC5M5Pxx/I/gQFQ6UnAQAAAABJRU5ErkJggg==" alt="A777777ZCCZ100.">
+      <div class="code">A777777ZCCZ100.</div>
+      <div class="desc">A777777 录入系统，余额 100</div>
+    </div>
+    <div class="card">
+      <div class="ttl">④ 正常进场</div>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6CAIAAAAHjs1qAAAD7ElEQVR4nO3dUWrcMBRA0ajM/rfsrqAmoGok+57zn04yvjwKD1njuq4faPiz+xeA75E7IXInRO6EyJ0QuRMid0LkTojcCZE7IXInRO6EyJ0QuRMid0LkTojcCZE7IXIn5DPzw2OMn3e5P7l7//eu+9kZtWd0z3QnRO6EyJ0QuRMid0LkTojcCZE7IXInZGqreu/MdwvPbBl37T7Xfe71umd0z3QnRO6EyJ0QuRMid0LkTojcCZE7IXInZOFWddfm7MxN4RON1z0j050QuRMid0LkTojcCZE7IXInRO6EyJ2QbVvVJ9p1znXXSdb3Md0JkTshcidE7oTInRC5EyJ3QuROiNwJsVX9b2buVeU7THdC5E6I3AmROyFyJ0TuhMidELkTIndCtm1Vaycs151VXed63TMy3QmROyFyJ0TuhMidELkTIndC5E6I3AlZuFV1OvP338au/eWInaA13QmROyFyJ0TuhMidELkTIndC5E6I3AkZ7zuP+MQdpKfwHaY7IXInRO6EyJ0QuRMid0LkTojcCZE7IZ8nnr+c+dwnbkafeKL0WvbG45l/2XQnRO6EyJ0QuRMid0LkTojcCZE7IXIn5NA3AK/bUJ65+9x1VvU6cvO9julOiNwJkTshcidE7oTInRC5EyJ3QuROyMKt6r11J0p3bTfPfIvvmVvkXUx3QuROiNwJkTshcidE7oTInRC5EyJ3QhZuVZ94/vKJm8Iz37U7Y93nmu6EyJ0QuRMid0LkTojcCZE7IXInRO6EfJ64zzvzJOuZN7au+66uTd/GDNOdELkTIndC5E6I3AmROyFyJ0TuhMidkHHme2vPdOamcNcTHJv20zN/r+lOiNwJkTshcidE7oTInRC5EyJ3QuROyOd9W8YZu+5VXbdH3PWMriNvqDXdCZE7IXInRO6EyJ0QuRMid0LkTojcCXnhvapPPGFZ25vuYroTIndC5E6I3AmROyFyJ0TuhMidELkTsnCreu/MW0h33TN65o2t4/Zzz9xP3zPdCZE7IXInRO6EyJ0QuRMid0LkTojcCdm2VX2iXbvPM12bNrIzTHdC5E6I3AmROyFyJ0TuhMidELkTIndCbFVfvnNd91uNZSdK1zHdCZE7IXInRO6EyJ0QuRMid0LkTojcCdm2VT1z6zZj3YZy3Td5LbvPddfbku+Z7oTInRC5EyJ3QuROiNwJkTshcidE7oQs3Kq+7424Z543feJdsMMbgGE1/5khRO6EyJ0QuRMid0LkTojcCZE7IeN9Z0bhX0x3QuROiNwJkTshcidE7oTInRC5EyJ3QuROiNwJkTshcidE7oTInRC5EyJ3QuROiNz56fgLlpLr/1AY2fEAAAAASUVORK5CYII=" alt="A777777.">
+      <div class="code">A777777.</div>
+      <div class="desc">已注册车牌，扣 20 元后开闸</div>
+    </div>
+    <div class="card">
+      <div class="ttl">⑤ 出厂车牌</div>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6CAIAAAAHjs1qAAAD6ElEQVR4nO3dUW4jIRQAwbDK/a88e4P5IRhwV/07ccatp0hP4PE8zw80/Nv9BuBz5E6I3AmROyFyJ0TuhMidELkTIndC5E6I3AmROyFyJ0TuhMidELkTIndC5E6I3An5nXnxGOPnu6w7ufv+rHb93hvNPCvTnRC5EyJ3QuROiNwJkTshcidE7oTInZCpreq7M+8WPnPLOPOuZp7zE/uMTHdC5E6I3AmROyFyJ0TuhMidELkTIndCFm5Vd23Odm0K121Gd22Cx9d9RqY7IXInRO6EyJ0QuRMid0LkTojcCZE7Idu2qpx/gvb7mO6EyJ0QuRMid0LkTojcCZE7IXInRO6E2Kp+yJmnUWtMd0LkTojcCZE7IXInRO6EyJ0QuRMid0K2bVXP/EbPdzO7z/fXnvk0niPf1QzTnRC5EyJ3QuROiNwJkTshcidE7oTInZCFW9Xa+ct1p1HXbWRH7DMy3QmROyFyJ0TuhMidELkTIndC5E6I3AkZ33cecZeZDaVP4TNMd0LkTojcCZE7IXInRO6EyJ0QuRMid0Kmtqq7zlCuOxU685PP/ObUdX/RjUx3QuROiNwJkTshcidE7oTInRC5EyJ3QrbdAPy+sdu1Czxzy3jmvnYc+azeme6EyJ0QuRMid0LkTojcCZE7IXInRO6EXHlWdZ0z3/ON72ocuXM13QmROyFyJ0TuhMidELkTIndC5E6I3AlZeFZ1xo1nVb/v9uBd1n2+pjshcidE7oTInRC5EyJ3QuROiNwJkTshvzeeobzxfO2NO9fnwtOo70x3QuROiNwJkTshcidE7oTInRC5EyJ3QqZuAK6p3fG7zq59relOiNwJkTshcidE7oTInRC5EyJ3QuROyMLvVb3RjU/jzFOwz5HbetOdELkTIndC5E6I3AmROyFyJ0TuhMidkIXfq3rmXm1mU3jjnbfvxqad664naboTIndC5E6I3AmROyFyJ0TuhMidELkTsnCreuNtujM/ed3JzjOf1bPstW4Ahj/gnxlC5E6I3AmROyFyJ0TuhMidELkTsm2reqNdN+KeeWZ0XHj/s+lOiNwJkTshcidE7oTInRC5EyJ3QuROiK3qEadgb7xb+Nn0NGaY7oTInRC5EyJ3QuROiNwJkTshcidE7oRs26qeuSk8cxe4a+c6Ltz1vjPdCZE7IXInRO6EyJ0QuRMid0LkTojcCRkzu7Eb74Dd9X2f6zaUZ+5c3+3ayJruhMidELkTIndC5E6I3AmROyFyJ0TuhExtVeEupjshcidE7oTInRC5EyJ3QuROiNwJkTshcidE7oTInRC5EyJ3QuROiNwJkTshcidE7vx0/AdB9gP84DPxPwAAAABJRU5ErkJggg==" alt="C123456.">
+      <div class="code">C123456.</div>
+      <div class="desc">预置车牌，余额 100，可开闸</div>
+    </div>
+    <div class="card">
+      <div class="ttl">⑥ 外来车辆</div>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6CAIAAAAHjs1qAAAD4UlEQVR4nO3dwYrbMBRA0bjM//+yu+3KDKiKJN9z9pkG5/IoPCRf931/oOHP6i8A3yN3QuROiNwJkTshcidE7oTInRC5EyJ3QuROiNwJkTshcidE7oTInRC5EyJ3QuROyM/Ih6/r+rzL+07u+o3+ZboTIndC5E6I3AmROyFyJ0TuhMidELkTMrRVPXFDOW/L+PyXn5/GyGdH3LHfyHQnRO6EyJ0QuRMid0LkTojcCZE7IXInZOJWddXm7MRN4Z471+t1v5HpTojcCZE7IXInRO6EyJ0QuRMid0LkTsiyrWrNyN6U/8V0J0TuhMidELkTIndC5E6I3AmROyFyJ8RW9UvsTXdguhMid0LkTojcCZE7IXInRO6EyJ0QuROybKu65z2977vFd8S95bcaYboTIndC5E6I3AmROyFyJ0TuhMidELkTMnGr6nTmd57kyO7zit08bLoTIndC5E6I3AmROyFyJ0TuhMidELkTcr3vPOKeTjyr+j6mOyFyJ0TuhMidELkTIndC5E6I3AmROyE/J56hHLlr99mJf3nev3u/btdruhMid0LkTojcCZE7IXInRO6EyJ0QuRMytFVdtXU7cbt54nd+31tmTXdC5E6I3AmROyFyJ0TuhMidELkTIndChm4AXrUb2/NtoKvOuT7b8xTsiJGnYboTIndC5E6I3AmROyFyJ0TuhMidELkTMnRW9cR93qpd756b0VVWnXI23QmROyFyJ0TuhMidELkTIndC5E6I3AmZuFUdsefuc2S7eeINwPe07bUbgGE6/5khRO6EyJ0QuRMid0LkTojcCZE7IUM3ANfseautk6y/Z7oTIndC5E6I3AmROyFyJ0TuhMidELkTMvG9qida9ZbZVSdZ7y3fBTuP6U6I3AmROyFyJ0TuhMidELkTIndC5E7IxBuA99yrrbrFd89ndW15H/K8p2G6EyJ3QuROiNwJkTshcidE7oTInRC5E7LsvaonbihHtoyr9pfzntU97bPzdq6mOyFyJ0TuhMidELkTIndC5E6I3AmROyHLtqon2vM23VVnRq8D73823QmROyFyJ0TuhMidELkTIndC5E6I3AmxVT3gDaZ73qV8T/tW8/a1pjshcidE7oTInRC5EyJ3QuROiNwJkTshy7aqe24K97Rq53oduOt9ZroTIndC5E6I3AmROyFyJ0TuhMidELkTco3sxk68A/Z9p1H33Lk+W7WRNd0JkTshcidE7oTInRC5EyJ3QuROiNwJGdqqwllMd0LkTojcCZE7IXInRO6EyJ0QuRMid0LkTojcCZE7IXInRO6EyJ0QuRMid0LkTojc+XT8BTko+vz927HHAAAAAElFTkSuQmCC" alt="B123456.">
+      <div class="code">B123456.</div>
+      <div class="desc">未注册，播报“外来车辆”</div>
+    </div>
+    <div class="card">
+      <div class="ttl">⑦ 无效码</div>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6CAIAAAAHjs1qAAAD90lEQVR4nO3dQW7cMBAAQTPw/7+8ufpEJCEYUuqq+9raVWMuA0rj8/l8QcOv0xcA/4/cCZE7IXInRO6EyJ0QuRMid0LkTojcCZE7IXInRO6EyJ0QuRMid0LkTojcCZE7Id8rHx5jfL3LvpO7+36r+TW7Rz+Z7oTInRC5EyJ3QuROiNwJkTshcidE7oQsbVXn7ny28MqWcf7Z+fe9c/f5ed09mjPdCZE7IXInRO6EyJ0QuRMid0LkTojcCdm4Vb3z7Oa+v/y+U6HjgfdoznQnRO6EyJ0QuRMid0LkTojcCZE7IXIn5NhWtWZlj/i+fe0ppjshcidE7oTInRC5EyJ3QuROiNwJkTshtqp/wXbz6Ux3QuROiNwJkTshcidE7oTInRC5EyJ3Qo5tVe98o+dc7QnAnwfeoznTnRC5EyJ3QuROiNwJkTshcidE7oTInZCNW9X3bRnn32hl53pqfzled4/mTHdC5E6I3AmROyFyJ0TuhMidELkTIndCxvvOI95p3/7SHfxzpjshcidE7oTInRC5EyJ3QuROiNwJkTsh3088u3nnmdH37U3Hod9q3/c13QmROyFyJ0TuhMidELkTIndC5E6I3AnZeFZ1Zct452b0iadCn/iNxrZrNt0JkTshcidE7oTInRC5EyJ3QuROiNwJuXSruuLUOdeVq7pzMzoOfd99THdC5E6I3AmROyFyJ0TuhMidELkTIndCLt2qnjqrOnfnk4fnPPH4J9OdELkTIndC5E6I3AmROyFyJ0TuhMidkI3vVZ3bdyr0zhO0K564kR1XbqBNd0LkTojcCZE7IXInRO6EyJ0QuRMid0KWtqr79nl3/uX5tu+JO8jxwLeurjDdCZE7IXInRO6EyJ0QuRMid0LkTojcCTl2VvVO8z3ivo3sPk79/mS6EyJ3QuROiNwJkTshcidE7oTInRC5E7K0VZ2786TjEzfBp560PLb931NMd0LkTojcCZE7IXInRO6EyJ0QuRMid0I2blVPbTfvfM/oijs3o2Pb85D3Md0JkTshcidE7oTInRC5EyJ3QuROiNwJObZVfaI73/a6svs85dTO1XQnRO6EyJ0QuRMid0LkTojcCZE7IXInxFb18e9GPfUu2M/CNnffZ+dMd0LkTojcCZE7IXInRO6EyJ0QuRMid0KObVXvfO/m3Kld4L7N6KlTsKf206Y7IXInRO6EyJ0QuRMid0LkTojcCZE7IRu3qnc+e3bF+85ufq685n3lmO6EyJ0QuRMid0LkTojcCZE7IXInRO6EjCeeGYV/Y7oTIndC5E6I3AmROyFyJ0TuhMidELkTIndC5E6I3AmROyFyJ0TuhMidELkTIndC5M5Xx29eQwoX8AOVKgAAAABJRU5ErkJggg==" alt="HELLO.">
+      <div class="code">HELLO.</div>
+      <div class="desc">格式不符，屏显示 INVALID</div>
+    </div></div>
+</body>
+</html>

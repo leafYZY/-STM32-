@@ -1,0 +1,75 @@
+#include "stm32f10x.h"
+#include "Voice.h"
+#include <string.h>
+
+/**
+  * 函    数：语音合成模块初始化（LU6288，USART1，PA9/PA10）
+  * 说    明：STM32通过USART1向LU6288发送文本，模块自动播报
+  */
+void Voice_Init(void)
+{
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+	
+	GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;			/*PA9 = USART1_TX → LU6288_RX*/
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;			/*PA10 = USART1_RX ← LU6288_TX（暂不接收）*/
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	USART_InitTypeDef USART_InitStructure;
+	USART_InitStructure.USART_BaudRate = 9600;			/*LU6288默认波特率，按模块手册调整*/
+	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+	USART_InitStructure.USART_Mode = USART_Mode_Tx;		/*仅发送*/
+	USART_InitStructure.USART_Parity = USART_Parity_No;
+	USART_InitStructure.USART_StopBits = USART_StopBits_1;
+	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+	USART_Init(USART1, &USART_InitStructure);
+	
+	USART_Cmd(USART1, ENABLE);
+}
+
+/**
+  * 函    数：向LU6288发送播报文本
+  * 参    数：text 要播报的文本字符串（GB2312编码）
+  * 说    明：LU6288接收文本后自动合成语音播报
+  *          命令格式按模块AT指令集，若模块为直接文本模式则可直发
+  *          此处先发送"播放文本"的帧头（按LU6288手册调整）
+  */
+void Voice_Play(char *text)
+{
+	uint8_t i;
+	/*若LU6288需要帧头帧尾，在此添加，例如 0xFD + len + 0x01 + text*/
+	/*以下为直接发送文本（适用于直发模式的模块）*/
+	for (i = 0; text[i] != '\0'; i++)
+	{
+		USART_SendData(USART1, (uint8_t)text[i]);
+		while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+	}
+	/*发送结束符（若模块需要）*/
+	/*USART_SendData(USART1, '\n');*/
+}
+
+/**
+  * 函    数：设置LU6288语音音量
+  * 参    数：vol 音量值 0~100
+  * 说    明：发送LU6288音量控制命令帧
+  *          帧格式: 0xFD + 长度(2字节大端) + 授权码 + 命令 + 参数类型 + 音量值
+  *          若模块固件版本不同，请按LU6288手册调整帧格式
+  */
+void Voice_SetVolume(uint8_t vol)
+{
+	uint8_t i;
+	if (vol > 100) vol = 100;
+	
+	uint8_t cmd[] = {0xFD, 0x00, 0x04, 0x00, 0x31, 0x01, vol};
+	for (i = 0; i < sizeof(cmd); i++)
+	{
+		USART_SendData(USART1, cmd[i]);
+		while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+	}
+}

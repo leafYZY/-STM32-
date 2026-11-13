@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">车库蓝牙助手</string>
+    <string name="hint_scan">① 接通车库蓝牙模块电源（HC-05：快闪=空闲，慢闪=已被占用）\n② 关掉 STM32 实体遥控器（蓝牙模块同时只能连一个主设备）\n③ 点右上角 ⋮ → 搜索设备，在列表里点你的模块\n④ 连上后【自动切换】到控制面板（开闸/关闸/模式/音量/检测器）\n\n※ 现在显示的是设备列表面板；只有连接成功才会出现控制按钮\n※ 列表会标注类型：经典（HC-05/06，走 SPP）或 BLE（HM-10/AT-09/JDY，走 GATT），两种都支持</string>
+    <string name="status_disconnected">未连接 · 请先搜索并选择蓝牙模块</string>
+    <string name="menu_scan">搜索设备</string>
+    <string name="menu_unbonded">显示未配对设备</string>
+    <string name="menu_disconnect">断开连接</string>
+    <string name="menu_about">关于 / 协议说明</string>
+</resources>

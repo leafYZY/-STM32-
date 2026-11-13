@@ -1,0 +1,859 @@
+﻿#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+#include "OLED.h"
+#include "KEY.h"
+#include "Serial.h"
+#include "LED.h"
+#include "SDCard.h"
+#include "ParkingLog.h"
+#include "string.h"
+#include "stdio.h"
+
+/*
+ * 本文件采用 UTF-8 编码（带 BOM）。
+ * 若 Keil 编译时出现中文乱码或警告，请在 Keil 中：
+ *   Edit -> Configuration -> Encoding 选择 "UTF-8" 并勾选 "Auto-identify..."
+ */
+
+/* ===================== 蓝牙连接状态引脚 =====================
+ * 网表中 STATE 网络接 STM32F103C8T6 卡座第 28 脚。
+ * 根据卡座引脚序列推断，卡座 28 脚对应 MCU 的 PA3。
+ * 若实际硬件接法不同，请修改 BT_STATE_GPIO / BT_STATE_PIN。
+ * =========================================================== */
+#define BT_STATE_GPIO	GPIOA
+#define BT_STATE_PIN	GPIO_Pin_3
+
+/* ===================== 1ms 系统时钟（TIM2） ===================== */
+volatile uint32_t gTick = 0;
+
+void TIM2_IRQHandler(void)
+{
+	if (TIM_GetITStatus(TIM2, TIM_IT_Update) == SET)
+	{
+		gTick++;
+		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+	}
+}
+
+void TIM2_Init(void)
+{
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+	
+	TIM_TimeBaseInitTypeDef TIM_InitStructure;
+	TIM_InitStructure.TIM_Period = 1000 - 1;
+	TIM_InitStructure.TIM_Prescaler = 72 - 1;
+	TIM_InitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+	TIM_InitStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	TIM_TimeBaseInit(TIM2, &TIM_InitStructure);
+	
+	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+	
+	NVIC_InitTypeDef NVIC_InitStructure;
+	NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+	NVIC_Init(&NVIC_InitStructure);
+	
+	TIM_Cmd(TIM2, ENABLE);
+}
+
+/* ===================== 菜单状态机 ===================== */
+typedef enum {
+	ST_MAIN,
+	ST_OPEN,
+	ST_CLOSE,
+	ST_HEIGHT,
+	ST_BRIGHTNESS,
+	ST_VOLUME,
+	ST_SENSOR,
+	ST_RECORDS,
+	ST_RECORD_DETAIL,
+	ST_CLEAR_RECORDS
+} MenuState_t;
+
+#define MENU_COUNT	8
+const char *MenuItems[MENU_COUNT] = {
+	"开闸",
+	"关闸",
+	"限高设置",
+	"屏幕亮度",
+	"语音音量",
+	"车位检测器",
+	"停车记录",
+	"清除记录"
+};
+
+MenuState_t gState = ST_MAIN;
+uint8_t gCursor = 0;
+uint8_t gTopItem = 0;
+
+/* 子菜单变量 */
+uint16_t gHeight = 150;			// 限高 150~500 cm
+uint8_t  gBrightness = 0xCF;	// 屏幕对比度 0~255
+uint8_t  gVolume = 50;			// 语音音量 0~100
+uint8_t  gSensor = 0;			// 当前传感器 0~5
+uint8_t  gSensorState[6] = {0};	// 传感器开关状态
+
+/* 0=自动扫码模式，1=蓝牙遥控模式 */
+uint8_t gMode = 0;
+
+/* 车库回复显示 */
+uint8_t  gReplyShow = 0;
+uint32_t gReplyStartTick = 0;
+char     gReplyBuf[32];
+
+/* LED 闪烁 */
+uint8_t  gLED1Flash = 0;
+uint8_t  gLED2Flash = 0;
+uint32_t gLED1StartTick = 0;
+uint32_t gLED2StartTick = 0;
+
+/* 开闸/关闸提示自动返回 */
+uint32_t gActionStartTick = 0;
+
+/* 停车记录浏览 */
+uint16_t gRecIndex = 0;     /* 当前选中的记录索引 */
+uint16_t gRecTop = 0;       /* 列表顶部记录索引 */
+uint8_t  gSDReady = 0;      /* SD卡初始化状态 */
+
+/* ===================== 车位号转具体车位 =====================
+ * 车库发送的车位号为 1~6:
+ *   1~3 -> L1层1~3号车位
+ *   4~6 -> L2层1~3号车位
+ * OLED字库中没有"层/号"字形，统一用紧凑格式 L1-1 / L2-2 显示
+ * =========================================================== */
+void GetSpaceText(uint8_t space, char *out)
+{
+	if (space >= 1 && space <= 3)
+		sprintf(out, "L1-%d", (int)space);
+	else if (space >= 4 && space <= 6)
+		sprintf(out, "L2-%d", (int)(space - 3));
+	else
+		strcpy(out, "--");
+}
+
+/* ===================== 蓝牙连接检测 ===================== */
+void BT_State_Init(void)
+{
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+	
+	GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+	GPIO_InitStructure.GPIO_Pin = BT_STATE_PIN;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(BT_STATE_GPIO, &GPIO_InitStructure);
+}
+
+uint8_t IsBTConnected(void)
+{
+	return GPIO_ReadInputDataBit(BT_STATE_GPIO, BT_STATE_PIN);
+}
+
+/* ===================== 命令与提示 ===================== */
+void SendCommand(const char *cmd)
+{
+	Serial_SendString(cmd);
+}
+
+void ShowNotConnected(void)
+{
+	OLED_ClearLine(2);
+	OLED_ClearLine(3);
+	OLED_ClearLine(4);
+	OLED_ShowStringMixed(2, 0, "蓝牙未连接!");
+	Delay_ms(1000);
+}
+
+/* ===================== 标题栏显示 ===================== */
+void ShowTitle(void)
+{
+	char title[32] = {0};
+	OLED_ClearLine(1);
+	if (gReplyShow)
+	{
+		OLED_ShowStringMixed(1, 0, gReplyBuf);
+	}
+	else
+	{
+		if (gMode)
+		{
+			strcat(title, "蓝牙遥控");
+		}
+		else
+		{
+			strcat(title, "自动扫码");
+		}
+		strcat(title, IsBTConnected() ? " [B]" : " [X]");
+		OLED_ShowStringMixed(1, 0, title);
+	}
+}
+
+/* ===================== 主菜单显示 ===================== */
+void ShowMainMenu(void)
+{
+	uint8_t i;
+	for (i = 0; i < 3; i++)
+	{
+		uint8_t item = gTopItem + i;
+		if (item >= MENU_COUNT) break;
+		
+		char buf[32] = {0};
+		if (item == gCursor)
+		{
+			strcpy(buf, "> ");
+		}
+		else
+		{
+			strcpy(buf, "  ");
+		}
+		strcat(buf, MenuItems[item]);
+		OLED_ClearLine(i + 2);
+		OLED_ShowStringMixed(i + 2, 0, buf);
+	}
+}
+
+/* ===================== 停车记录列表显示 ===================== */
+void ShowRecordsList(void)
+{
+	uint8_t i;
+	uint16_t total = ParkingLog_GetCount();
+
+	for (i = 0; i < 3; i++)
+	{
+		uint16_t idx = gRecTop + i;
+		char buf[32] = {0};
+
+		OLED_ClearLine(i + 2);
+
+		if (idx >= total)
+		{
+			/* No more records */
+			break;
+		}
+
+		ParkingRecord_t rec;
+		if (ParkingLog_GetRecord(idx, &rec))
+		{
+			char sp[8];
+			GetSpaceText(rec.space, sp);
+			if (idx == gRecIndex)
+				sprintf(buf, ">%d.%s %02d:%02d:%02d %s",
+					(int)(idx + 1), rec.plate, rec.hour, rec.minute, rec.second, sp);
+			else
+				sprintf(buf, " %d.%s %02d:%02d:%02d %s",
+					(int)(idx + 1), rec.plate, rec.hour, rec.minute, rec.second, sp);
+			OLED_ShowStringMixed(i + 2, 0, buf);
+		}
+	}
+
+	/* Clear remaining lines */
+	for (; i < 3; i++)
+		OLED_ClearLine(i + 2);
+}
+
+/* ===================== 停车记录详情显示 ===================== */
+void ShowRecordDetail(void)
+{
+	ParkingRecord_t rec;
+	char buf[32];
+
+	OLED_ClearLine(2);
+	OLED_ClearLine(3);
+	OLED_ClearLine(4);
+
+	if (ParkingLog_GetRecord(gRecIndex, &rec))
+	{
+		sprintf(buf, "记录 %d/%d", (int)(gRecIndex + 1), (int)ParkingLog_GetCount());
+		OLED_ShowStringMixed(2, 0, buf);
+		sprintf(buf, "%s %02d:%02d:%02d", rec.plate, rec.hour, rec.minute, rec.second);
+		OLED_ShowStringMixed(3, 0, buf);
+		{
+			char sp[8];
+			GetSpaceText(rec.space, sp);
+			sprintf(buf, "车位:%s", sp);
+		}
+		OLED_ShowStringMixed(4, 0, buf);
+	}
+	else
+	{
+		OLED_ShowStringMixed(2, 0, "读取失败");
+	}
+}
+
+/* ===================== 整体刷新 ===================== */
+void RefreshDisplay(void)
+{
+	ShowTitle();
+	switch (gState)
+	{
+		case ST_MAIN:
+			ShowMainMenu();
+			break;
+		case ST_OPEN:
+			OLED_ClearLine(2);
+			OLED_ClearLine(3);
+			OLED_ClearLine(4);
+			OLED_ShowStringMixed(2, 0, ">>> 已发送开闸 <<<");
+			break;
+		case ST_CLOSE:
+			OLED_ClearLine(2);
+			OLED_ClearLine(3);
+			OLED_ClearLine(4);
+			OLED_ShowStringMixed(2, 0, ">>> 已发送关闸 <<<");
+			break;
+		case ST_HEIGHT:
+			OLED_ClearLine(2);
+			OLED_ClearLine(3);
+			OLED_ClearLine(4);
+			OLED_ShowStringMixed(2, 0, "限高设置");
+			{
+				char buf[32];
+				sprintf(buf, "限高:%dcm", gHeight);
+				OLED_ShowStringMixed(3, 0, buf);
+				OLED_ShowStringMixed(4, 0, "左-10 右+10 OK保存");
+			}
+			break;
+		case ST_BRIGHTNESS:
+			OLED_ClearLine(2);
+			OLED_ClearLine(3);
+			OLED_ClearLine(4);
+			OLED_ShowStringMixed(2, 0, "屏幕亮度");
+			{
+				char buf[32];
+				sprintf(buf, "亮度:%d", gBrightness);
+				OLED_ShowStringMixed(3, 0, buf);
+				OLED_ShowStringMixed(4, 0, "左-16 右+16 OK保存");
+			}
+			break;
+		case ST_VOLUME:
+			OLED_ClearLine(2);
+			OLED_ClearLine(3);
+			OLED_ClearLine(4);
+			OLED_ShowStringMixed(2, 0, "语音音量");
+			{
+				char buf[32];
+				sprintf(buf, "音量:%d%%", gVolume);
+				OLED_ShowStringMixed(3, 0, buf);
+				OLED_ShowStringMixed(4, 0, "左-5%% 右+5%% OK发送");			
+			}
+			break;
+		case ST_SENSOR:
+			OLED_ClearLine(2);
+			OLED_ClearLine(3);
+			OLED_ClearLine(4);
+			OLED_ShowStringMixed(2, 0, "车位检测器");
+			{
+				char buf[32];
+        sprintf(buf, "传感器 L%d:%s", gSensor + 1, gSensorState[gSensor] ? "ON" : "OFF");
+				OLED_ShowStringMixed(3, 0, buf);
+				OLED_ShowStringMixed(4, 0, "OK切换 ON/OFF SW1返回");
+			}
+			break;
+		case ST_RECORDS:
+			ShowRecordsList();
+			break;
+		case ST_RECORD_DETAIL:
+			ShowRecordDetail();
+			break;
+		case ST_CLEAR_RECORDS:
+			OLED_ClearLine(2);
+			OLED_ClearLine(3);
+			OLED_ClearLine(4);
+			OLED_ShowStringMixed(2, 0, "确认清除所有");
+			OLED_ShowStringMixed(3, 0, "停车记录?");
+			OLED_ShowStringMixed(4, 0, "OK确认 SW1取消");
+			break;
+	}
+}
+
+void EnterState(MenuState_t newState)
+{
+	gState = newState;
+	RefreshDisplay();
+}
+
+/* ===================== 开闸/关闸操作 ===================== */
+void DoOpenGate(void)
+{
+	if (!IsBTConnected())
+	{
+		ShowNotConnected();
+		EnterState(ST_MAIN);
+		return;
+	}
+	LED1_ON();
+	gLED1Flash = 1;
+	gLED1StartTick = gTick;
+	gActionStartTick = gTick;
+	SendCommand("@K#*");
+	EnterState(ST_OPEN);
+}
+
+void DoCloseGate(void)
+{
+	if (!IsBTConnected())
+	{
+		ShowNotConnected();
+		EnterState(ST_MAIN);
+		return;
+	}
+	LED2_ON();
+	gLED2Flash = 1;
+	gLED2StartTick = gTick;
+	gActionStartTick = gTick;
+	SendCommand("@G#*");
+	EnterState(ST_CLOSE);
+}
+
+/* ===================== 主菜单按键处理 ===================== */
+void HandleMainMenuKey(uint8_t key)
+{
+	switch (key)
+	{
+		case KEY_SW1:
+			DoOpenGate();
+			break;
+		case KEY_SW2:
+			DoCloseGate();
+			break;
+		case KEY_UP:
+			if (gCursor > 0)
+			{
+				gCursor--;
+				if (gCursor < gTopItem) gTopItem = gCursor;
+				RefreshDisplay();
+			}
+			break;
+		case KEY_DOWN:
+			if (gCursor < MENU_COUNT - 1)
+			{
+				gCursor++;
+				if (gCursor >= gTopItem + 3) gTopItem = gCursor - 2;
+				RefreshDisplay();
+			}
+			break;
+		case KEY_OK:
+			switch (gCursor)
+			{
+				case 0: DoOpenGate(); break;
+				case 1: DoCloseGate(); break;
+				case 2: EnterState(ST_HEIGHT); break;
+				case 3: EnterState(ST_BRIGHTNESS); break;
+				case 4: EnterState(ST_VOLUME); break;
+				case 5: EnterState(ST_SENSOR); break;
+				case 6:
+					if (gSDReady)
+					{
+						gRecIndex = 0;
+						gRecTop = 0;
+						EnterState(ST_RECORDS);
+					}
+					else
+					{
+						OLED_ClearLine(2);
+						OLED_ClearLine(3);
+						OLED_ClearLine(4);
+						OLED_ShowStringMixed(2, 0, "SD卡未就绪!");
+						Delay_ms(1000);
+						EnterState(ST_MAIN);
+					}
+					break;
+				case 7:
+					if (gSDReady)
+						EnterState(ST_CLEAR_RECORDS);
+					else
+					{
+						OLED_ClearLine(2);
+						OLED_ClearLine(3);
+						OLED_ClearLine(4);
+						OLED_ShowStringMixed(2, 0, "SD卡未就绪!");
+						Delay_ms(1000);
+						EnterState(ST_MAIN);
+					}
+					break;
+			}
+			break;
+	}
+}
+
+/* ===================== 子菜单按键处理 ===================== */
+void HandleSubMenuKey(uint8_t key)
+{
+	switch (gState)
+	{
+		case ST_HEIGHT:
+			switch (key)
+			{
+				case KEY_LEFT:
+					if (gHeight > 150) gHeight -= 10;
+					RefreshDisplay();
+					break;
+				case KEY_RIGHT:
+					if (gHeight < 500) gHeight += 10;
+					RefreshDisplay();
+					break;
+				case KEY_OK:
+					// 保存并返回
+					EnterState(ST_MAIN);
+					break;
+				case KEY_SW1:
+					// 放弃返回
+					EnterState(ST_MAIN);
+					break;
+			}
+			break;
+		case ST_BRIGHTNESS:
+			switch (key)
+			{
+				case KEY_LEFT:
+					if (gBrightness >= 16) gBrightness -= 16;
+					else gBrightness = 0;
+					RefreshDisplay();
+					break;
+				case KEY_RIGHT:
+					if (gBrightness <= 239) gBrightness += 16;
+					else gBrightness = 255;
+					RefreshDisplay();
+					break;
+				case KEY_OK:
+					OLED_SetContrast(gBrightness);
+					EnterState(ST_MAIN);
+					break;
+				case KEY_SW1:
+					gBrightness = 0xCF;
+					OLED_SetContrast(gBrightness);
+					EnterState(ST_MAIN);
+					break;
+			}
+			break;
+		case ST_VOLUME:
+			switch (key)
+			{
+				case KEY_LEFT:
+					if (gVolume >= 5) gVolume -= 5;
+					RefreshDisplay();
+					break;
+				case KEY_RIGHT:
+					if (gVolume <= 95) gVolume += 5;
+					RefreshDisplay();
+					break;
+				case KEY_OK:
+					if (!IsBTConnected())
+					{
+						ShowNotConnected();
+						EnterState(ST_MAIN);
+						break;
+					}
+					{
+						char buf[16];
+						sprintf(buf, "@V%03d#*", gVolume);
+						SendCommand(buf);
+					}
+					EnterState(ST_MAIN);
+					break;
+				case KEY_SW1:
+					EnterState(ST_MAIN);
+					break;
+			}
+			break;
+		case ST_SENSOR:
+			switch (key)
+			{
+				case KEY_UP:
+					if (gSensor > 0) gSensor--;
+					RefreshDisplay();
+					break;
+				case KEY_DOWN:
+					if (gSensor < 5) gSensor++;
+					RefreshDisplay();
+					break;
+				case KEY_OK:
+					if (!IsBTConnected())
+					{
+						ShowNotConnected();
+						EnterState(ST_MAIN);
+						break;
+					}
+					gSensorState[gSensor] = !gSensorState[gSensor];
+					{
+						char buf[16];
+						sprintf(buf, "@S%d=%d#*", gSensor + 1, gSensorState[gSensor]);
+						SendCommand(buf);
+					}
+					RefreshDisplay();
+					break;
+				case KEY_SW1:
+					EnterState(ST_MAIN);
+					break;
+			}
+			break;
+		case ST_RECORDS:
+			switch (key)
+			{
+				case KEY_UP:
+					if (gRecIndex > 0)
+					{
+						gRecIndex--;
+						if (gRecIndex < gRecTop) gRecTop = gRecIndex;
+						RefreshDisplay();
+					}
+					break;
+				case KEY_DOWN:
+					if (gRecIndex < ParkingLog_GetCount() - 1)
+					{
+						gRecIndex++;
+						if (gRecIndex >= gRecTop + 3) gRecTop = gRecIndex - 2;
+						RefreshDisplay();
+					}
+					break;
+				case KEY_OK:
+					EnterState(ST_RECORD_DETAIL);
+					break;
+				case KEY_SW1:
+					EnterState(ST_MAIN);
+					break;
+			}
+			break;
+		case ST_RECORD_DETAIL:
+			switch (key)
+			{
+				case KEY_LEFT:
+					if (gRecIndex > 0)
+					{
+						gRecIndex--;
+						RefreshDisplay();
+					}
+					break;
+				case KEY_RIGHT:
+					if (gRecIndex < ParkingLog_GetCount() - 1)
+					{
+						gRecIndex++;
+						RefreshDisplay();
+					}
+					break;
+				case KEY_OK:
+				case KEY_SW1:
+					EnterState(ST_RECORDS);
+					break;
+			}
+			break;
+		case ST_CLEAR_RECORDS:
+			switch (key)
+			{
+				case KEY_OK:
+					/* 确认清除 */
+					{
+						uint8_t ok = ParkingLog_ClearAll();
+						OLED_ClearLine(2);
+						OLED_ClearLine(3);
+						OLED_ClearLine(4);
+						if (ok)
+							OLED_ShowStringMixed(2, 0, "已清除所有记录");
+						else
+							OLED_ShowStringMixed(2, 0, "清除失败!");
+						Delay_ms(1000);
+						EnterState(ST_MAIN);
+					}
+					break;
+				case KEY_SW1:
+					/* 取消返回 */
+					EnterState(ST_MAIN);
+					break;
+			}
+			break;
+		default:
+			break;
+	}
+}
+
+/* ===================== 模式切换（SW3） ===================== */
+void HandleModeSwitch(void)
+{
+	uint8_t sw3 = SW3_GetEvent();
+	if (sw3 == KEY_SW3_LEFT)
+	{
+		gMode = 0;
+		if (IsBTConnected())
+		{
+			SendCommand("@A#*");
+		}
+		ShowTitle();
+	}
+	else if (sw3 == KEY_SW3_RIGHT)
+	{
+		gMode = 1;
+		if (IsBTConnected())
+		{
+			SendCommand("@M#*");
+		}
+		ShowTitle();
+	}
+}
+
+/* ===================== 车库回复处理 ===================== */
+void HandleResponse(void)
+{
+	if (Serial_RxFlag)
+	{
+		Serial_RxFlag = 0;
+
+		/* Check if this is a parking record: @P<plate>|<HHMMSS>|<space>#* */
+		if (Serial_RxPacket[1] == 'P' && Serial_RxPacket[2] != 'O')
+		{
+			/* Parse parking record for display */
+			char plate[8] = {0};
+			uint8_t h = 0, m = 0, s = 0, space = 0;
+			const char *p = Serial_RxPacket + 2;  /* skip @P */
+			uint8_t i = 0;
+			while (*p && *p != '|' && i < 7)
+			{
+				plate[i++] = *p++;
+			}
+			plate[i] = '\0';
+			if (*p == '|')
+			{
+				p++;
+				if (p[0] >= '0' && p[0] <= '9' && p[1] >= '0' && p[1] <= '9' &&
+				    p[2] >= '0' && p[2] <= '9' && p[3] >= '0' && p[3] <= '9' &&
+				    p[4] >= '0' && p[4] <= '9' && p[5] >= '0' && p[5] <= '9')
+				{
+					h = (p[0]-'0')*10 + (p[1]-'0');
+					m = (p[2]-'0')*10 + (p[3]-'0');
+					s = (p[4]-'0')*10 + (p[5]-'0');
+					p += 6;
+					if (*p == '|')
+					{
+						p++;
+						if (*p >= '0' && *p <= '9')
+						{
+							space = *p - '0';
+							p++;
+							if (*p >= '0' && *p <= '9')
+								space = space * 10 + (*p - '0');
+						}
+					}
+				}
+			}
+
+			/* Parking data from garage - store to SD card */
+			if (gSDReady)
+			{
+				uint8_t ok = ParkingLog_AddFromBLE(Serial_RxPacket);
+				if (ok)
+				{
+					/* Display plate + garage real-time + space */
+					char sp[8];
+					GetSpaceText(space, sp);
+					sprintf(gReplyBuf, "%s %02d:%02d:%02d %s",
+						plate, h, m, s, sp);
+					LED1_ON();
+					gLED1Flash = 1;
+					gLED1StartTick = gTick;
+				}
+				else
+				{
+					strncpy(gReplyBuf, "SD写入失败!", sizeof(gReplyBuf) - 1);
+				}
+			}
+			else
+			{
+				strncpy(gReplyBuf, "SD卡未就绪", sizeof(gReplyBuf) - 1);
+			}
+		}
+		else
+		{
+			/* Regular response - display as-is */
+			strncpy(gReplyBuf, Serial_RxPacket, sizeof(gReplyBuf) - 1);
+		}
+		gReplyBuf[sizeof(gReplyBuf) - 1] = '\0';
+		gReplyShow = 1;
+		gReplyStartTick = gTick;
+		ShowTitle();
+	}
+	if (gReplyShow && (gTick - gReplyStartTick) >= 1500)
+	{
+		gReplyShow = 0;
+		ShowTitle();
+	}
+}
+
+/* ===================== LED 任务 ===================== */
+void LED_Task(void)
+{
+	if (gLED1Flash && (gTick - gLED1StartTick) >= 200)
+	{
+		LED1_OFF();
+		gLED1Flash = 0;
+	}
+	if (gLED2Flash && (gTick - gLED2StartTick) >= 200)
+	{
+		LED2_OFF();
+		gLED2Flash = 0;
+	}
+}
+
+/* ===================== 主函数 ===================== */
+int main(void)
+{
+	OLED_Init();
+	LED_Init();
+	Serial_Init();
+	Key_Init();
+	SW3_InitState();
+	BT_State_Init();
+	TIM2_Init();
+
+	/* Show SD init prompt before blocking SD_Init() */
+	OLED_Clear();
+	OLED_ShowStringMixed(2, 0, "正在初始化SD卡...");
+
+	/* Initialize SD card and parking log (may take a few seconds) */
+	gSDReady = ParkingLog_Init();
+
+	OLED_Clear();
+	EnterState(ST_MAIN);
+
+	/* Show SD card status briefly on startup */
+	if (!gSDReady)
+	{
+		OLED_ShowStringMixed(4, 0, "SD卡未检测到");
+		Delay_ms(1000);
+		EnterState(ST_MAIN);
+	}
+
+	while (1)
+	{
+		uint8_t key = Key_GetNum();
+		if (key != KEY_NONE)
+		{
+			if (gState == ST_MAIN)
+			{
+				HandleMainMenuKey(key);
+			}
+			else
+			{
+				HandleSubMenuKey(key);
+			}
+		}
+
+		HandleModeSwitch();
+		HandleResponse();
+		LED_Task();
+
+		/* 蓝牙连接状态变化时刷新标题 */
+		static uint8_t lastBT = 0xFF;
+		uint8_t bt = IsBTConnected();
+		if (bt != lastBT)
+		{
+			lastBT = bt;
+			ShowTitle();
+		}
+
+		/* 开闸/关闸提示 1 秒后自动返回主菜单 */
+		if ((gState == ST_OPEN || gState == ST_CLOSE) && (gTick - gActionStartTick) >= 1000)
+		{
+			EnterState(ST_MAIN);
+		}
+	}
+}

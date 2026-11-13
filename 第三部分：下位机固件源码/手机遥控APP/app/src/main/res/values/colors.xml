@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand">#1565C0</color>
+    <color name="brand_dark">#0D47A1</color>
+    <color name="brand_light">#E8F0FB</color>
+    <color name="page_bg">#F2F4F7</color>
+
+    <color name="gate_open">#2E7D32</color>
+    <color name="gate_close">#C62828</color>
+    <color name="gate_wait">#EF6C00</color>
+
+    <color name="ok_green">#2E7D32</color>
+    <color name="warn_red">#C62828</color>
+
+    <color name="text_primary">#1F2937</color>
+    <color name="text_secondary">#6B7280</color>
+    <color name="line">#E3E6EB</color>
+
+    <color name="log_bg">#FF12181F</color>
+    <color name="log_text">#FFC7D2DE</color>
+    <color name="log_tx">#FF6EC1FF</color>
+    <color name="log_rx">#FF7FD68A</color>
+    <color name="log_sys">#FFE8B85C</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
